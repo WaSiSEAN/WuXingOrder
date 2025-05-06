@@ -14,13 +14,13 @@
     .player { background: #e0f7fa; border: 1px solid #00796b; padding: 4px; border-radius: 4px; text-align: center; cursor: grab; }
     .sub-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     input, select { width: 100%; padding: 4px; }
-    .score { display: flex; justify-content: center; gap: 1rem; font-size: 2.5rem; font-family: 'Arial Black', Arial, sans-serif; }
+    .score { display: flex; justify-content: center; gap: 1rem; font-size: 3rem; font-family: 'Arial Black', Arial, sans-serif; }
     .droppable td { min-height: 38px; }
   </style>
 </head>
 <body>
 <div class="wrapper">
-  <div class="title">吳興街友 雙和聯盟 B組 攻守名單</div>
+  <div class="title" id="title">吳興街友 攻守名單</div>
   <table>
     <tr><td colspan="2">比賽日期</td><td colspan="2" id="date"></td><td>開賽時間</td><td id="start"></td></tr>
     <tr><td colspan="2">比賽對手</td><td colspan="2" id="opponent"></td><td>集合時間</td><td id="gather"></td></tr>
@@ -58,6 +58,7 @@ fetch(sheetCSV)
   .then(res => res.text())
   .then(csv => {
     const data = Papa.parse(csv, { header: false }).data;
+    document.getElementById('title').textContent = '吳興街友 ' + (data[0][7] || '') + ' ' + (data[0][8] || '') + ' 攻守名單';
     document.getElementById('date').textContent = data[1][8] || '';
     document.getElementById('start').textContent = data[3][8] || '';
     document.getElementById('gather').textContent = data[2][8] || '';
