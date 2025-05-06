@@ -14,7 +14,7 @@
     .player { background: #e0f7fa; border: 1px solid #00796b; padding: 4px; border-radius: 4px; text-align: center; cursor: grab; }
     .sub-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     input, select { width: 100%; padding: 4px; }
-    .score { display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold; }
+    .score { display: flex; justify-content: center; gap: 1rem; font-size: 2.5rem; font-family: 'Arial Black', Arial, sans-serif; }
     .droppable td { min-height: 38px; }
   </style>
 </head>
@@ -29,7 +29,9 @@
   <table>
     <thead><tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr></thead>
     <tbody id="lineup" class="droppable"></tbody>
-    <tr id="pitcher-row"><td>P</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+    <tr id="pitcher-row">
+      <td colspan="2">P</td><td></td><td></td>
+    </tr>
   </table>
   <div class="title">預備球員</div>
   <div id="bench" class="grid"></div>
@@ -56,11 +58,11 @@ fetch(sheetCSV)
   .then(res => res.text())
   .then(csv => {
     const data = Papa.parse(csv, { header: false }).data;
-    document.getElementById('date').textContent = data[0][7] || '';
-    document.getElementById('start').textContent = data[2][8] || '';
-    document.getElementById('gather').textContent = data[1][8] || '';
-    document.getElementById('opponent').textContent = data[3][7] || '';
-    document.getElementById('offdef').textContent = '攻守：' + (data[4][7] || '');
+    document.getElementById('date').textContent = data[1][8] || '';
+    document.getElementById('start').textContent = data[3][8] || '';
+    document.getElementById('gather').textContent = data[2][8] || '';
+    document.getElementById('opponent').textContent = data[4][8] || '';
+    document.getElementById('offdef').textContent = '攻守：' + (data[5][8] || '');
 
     const headers = data[6];
     const body = data.slice(7);
@@ -151,12 +153,15 @@ function substitute() {
 function rotatePositions() {
   const str = document.getElementById('rotate-input').value;
   const seq = str.trim().split('');
-  const selects = document.querySelectorAll('#lineup select, #pitcher-row select');
+  const selects = document.querySelectorAll('#lineup select');
   const posMap = {};
   selects.forEach(sel => posMap[sel.value] = sel);
+  const temp = {};
   for (let i = 0; i < seq.length; i++) {
-    if (posMap[seq[i]]) posMap[seq[i]].value = seq[(i + 1) % seq.length];
+    const cur = seq[i], next = seq[(i + 1) % seq.length];
+    if (posMap[cur]) temp[cur] = next;
   }
+  Object.keys(temp).forEach(k => posMap[k].value = temp[k]);
 }
 </script>
 </body>
