@@ -14,7 +14,8 @@
     .player { background: #e0f7fa; border: 1px solid #00796b; padding: 4px; border-radius: 4px; text-align: center; cursor: grab; }
     .sub-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     input, select { width: 100%; padding: 4px; }
-    .score { display: flex; justify-content: center; gap: 1rem; font-size: 3rem; font-family: 'Arial Black', Arial, sans-serif; }
+    .score input { font-size: 3rem; font-family: 'Arial Black', Arial, sans-serif; text-align: center; }
+    .score { display: flex; justify-content: center; gap: 1rem; }
     .droppable td { min-height: 38px; }
   </style>
 </head>
@@ -52,7 +53,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
-let players = [], lineup = new Array(9).fill(null), bench = [], uniqueId = p => `#${p['背號']} ${p['姓名']}`;
+let players = [], lineup = new Array(9).fill(null);
 
 fetch(sheetCSV)
   .then(res => res.text())
@@ -69,7 +70,7 @@ fetch(sheetCSV)
     const body = data.slice(7);
     const getIndex = key => headers.indexOf(key);
     const idxNum = getIndex('背號'), idxName = getIndex('姓名'), idxAttend = getIndex('出席');
-    players = body.filter(r => r[idxAttend] === 'Y' && r[idxNum] && r[idxName]).map(r => ({ '背號': r[idxNum], '姓名': r[idxName] }));
+    players = body.filter(r => r[idxAttend] === 'Y' && r[idxNum] && r[idxName]).map((r, i) => ({ id: i + '-' + r[idxNum] + '-' + r[idxName], '背號': r[idxNum], '姓名': r[idxName] }));
     renderBench();
     renderLineup();
   });
@@ -95,7 +96,7 @@ function renderLineup() {
       e.preventDefault();
       const p = JSON.parse(e.dataTransfer.getData('text/plain'));
       lineup[i] = p;
-      players = players.filter(x => uniqueId(x) !== uniqueId(p));
+      players = players.filter(x => x.id !== p.id);
       renderBench();
       renderLineup();
     });
@@ -110,7 +111,7 @@ function renderBench() {
   players.forEach(p => {
     const div = document.createElement('div');
     div.className = 'player';
-    div.textContent = uniqueId(p);
+    div.textContent = `#${p['背號']} ${p['姓名']}`;
     div.draggable = true;
     div.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/plain', JSON.stringify(p));
@@ -129,14 +130,14 @@ function updateSubDropdowns() {
     if (p) {
       const opt = document.createElement('option');
       opt.value = i;
-      opt.text = uniqueId(p);
+      opt.text = `#${p['背號']} ${p['姓名']}`;
       outSel.appendChild(opt);
     }
   });
   players.forEach((p, i) => {
     const opt = document.createElement('option');
     opt.value = i;
-    opt.text = uniqueId(p);
+    opt.text = `#${p['背號']} ${p['姓名']}`;
     inSel.appendChild(opt);
   });
 }
@@ -157,12 +158,11 @@ function rotatePositions() {
   const selects = document.querySelectorAll('#lineup select');
   const posMap = {};
   selects.forEach(sel => posMap[sel.value] = sel);
-  const temp = {};
+  const values = seq.map(k => posMap[k]?.value);
   for (let i = 0; i < seq.length; i++) {
-    const cur = seq[i], next = seq[(i + 1) % seq.length];
-    if (posMap[cur]) temp[cur] = next;
+    const cur = seq[i], nextVal = values[(i + values.length - 1) % values.length];
+    if (posMap[cur]) posMap[cur].value = nextVal;
   }
-  Object.keys(temp).forEach(k => posMap[k].value = temp[k]);
 }
 </script>
 </body>
