@@ -5,61 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>攻守名單管理</title>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #fff;
-      margin: 0;
-      padding: 1rem;
-    }
-    .wrapper {
-      max-width: 960px;
-      margin: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 1rem;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      text-align: center;
-      padding: 6px;
-    }
-    .title {
-      text-align: center;
-      font-size: 1.2rem;
-      font-weight: bold;
-      margin: 1rem 0;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem;
-    }
-    .player {
-      background: #e0f7fa;
-      border: 1px solid #00796b;
-      padding: 4px;
-      border-radius: 4px;
-      text-align: center;
-      cursor: grab;
-    }
-    .sub-row {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    input, select {
-      width: 100%;
-      padding: 4px;
-    }
-    .score {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
+    body { font-family: sans-serif; background: #fff; margin: 0; padding: 1rem; }
+    .wrapper { max-width: 960px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { border: 1px solid #ccc; text-align: center; padding: 6px; }
+    .title { text-align: center; font-size: 1.2rem; font-weight: bold; margin: 1rem 0; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+    .player { background: #e0f7fa; border: 1px solid #00796b; padding: 4px; border-radius: 4px; text-align: center; cursor: grab; }
+    .sub-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    input, select { width: 100%; padding: 4px; }
+    .score { display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -75,49 +30,43 @@
     <tbody id="lineup"></tbody>
     <tr><td colspan="4">P</td></tr>
   </table>
-
   <div class="title">預備球員</div>
   <div id="bench" class="grid"></div>
-
   <div class="title">球員更換</div>
   <div class="sub-row">
     <div><label>換下</label><select id="sub-out"></select></div>
     <div><label>換上</label><select id="sub-in"></select></div>
     <div style="align-self: end;"><button onclick="substitute()">執行換人</button></div>
   </div>
-
   <div class="title">守位輪換</div>
   <input type="text" id="rotate-input" placeholder="例如：8918" />
   <button onclick="rotatePositions()" style="margin-top:0.5rem;width:100%;">執行輪換</button>
-
   <div class="title">比數</div>
   <div class="score">
     <input type="number" id="score1" value="0"/>:<input type="number" id="score2" value="0"/>
   </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tabletop@1.6.0/tabletop.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
-const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pubhtml?gid=0&single=true';
-let players = [];
-let lineup = [];
+const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
+let players = [], lineup = [];
 
-Tabletop.init({
-  key: sheetURL,
-  callback: function (data) {
-    const info = data.find(d => d['雙和聯盟']);
+fetch(sheetCSV)
+  .then(res => res.text())
+  .then(csv => {
+    const parsed = Papa.parse(csv, { header: true });
+    const rows = parsed.data;
+    const info = rows.find(r => r['雙和聯盟'] !== undefined);
     if(info){
-      document.getElementById('date').textContent = info['比賽日期'];
-      document.getElementById('start').textContent = info['開賽時間'];
-      document.getElementById('gather').textContent = info['集合時間'];
-      document.getElementById('opponent').textContent = info['對手'];
-      document.getElementById('offdef').textContent = '攻守：' + info['攻守'];
+      document.getElementById('date').textContent = info['比賽日期'] || '';
+      document.getElementById('start').textContent = info['開賽時間'] || '';
+      document.getElementById('gather').textContent = info['集合時間'] || '';
+      document.getElementById('opponent').textContent = info['對手'] || '';
+      document.getElementById('offdef').textContent = '攻守：' + (info['攻守'] || '');
     }
-    players = data.filter(p => p['出席'] === 'Y');
+    players = rows.filter(p => p['出席'] === 'Y' && p['背號'] && p['姓名']);
     renderBench();
-  },
-  simpleSheet: true
-});
+  });
 
 function renderBench(){
   const bench = document.getElementById('bench');
