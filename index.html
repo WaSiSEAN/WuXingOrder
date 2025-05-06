@@ -71,7 +71,92 @@ function updateScoreColor() {
   else area.classList.add('orange');
 }
 
-// ...（保留原始 fetch 與其他函式內容不變）...
+fetch(sheetCSV)
+  .then(res => res.text())
+  .then(csv => {
+    const data = Papa.parse(csv, { header: false }).data;
+    document.getElementById('title').textContent = '吳興街友 ' + (data[0][7] || '') + ' ' + (data[0][8] || '') + ' 攻守名單';
+    document.getElementById('date').textContent = data[1][8] || '';
+    document.getElementById('start').textContent = data[3][8] || '';
+    document.getElementById('gather').textContent = data[2][8] || '';
+    document.getElementById('opponent').textContent = data[4][8] || '';
+    document.getElementById('offdef').textContent = '攻守：' + (data[5][8] || '');
+
+    players = data.map(r => ({ 背號: r[0], 姓名: r[1], 出席: r[2] }))
+      .filter(p => (p.出席 + '').trim().toUpperCase() === 'Y' && p.背號 && p.姓名)
+      .map(p => ({ ...p, id: crypto.randomUUID() }));
+
+    renderBench();
+    renderLineup();
+    renderPitcher();
+    updateScoreColor();
+  });
+
+function renderLineup() {
+  const tbody = document.getElementById('lineup');
+  tbody.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const tr = document.createElement('tr');
+    const pos = document.createElement('select');
+    [1,2,3,4,5,6,7,8,9,'DH'].forEach(n => {
+      const opt = document.createElement('option'); opt.value = opt.text = n; pos.appendChild(opt);
+    });
+    pos.value = positions[i];
+    pos.onchange = () => { positions[i] = pos.value; };
+    const player = lineup[i];
+    tr.innerHTML = `<td>${i + 1}</td>`;
+    const td1 = document.createElement('td'); td1.appendChild(pos);
+    const td2 = document.createElement('td'); td2.textContent = player?.姓名 || '';
+    const td3 = document.createElement('td'); td3.textContent = player?.背號 || '';
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    tr.dataset.index = i;
+    tr.addEventListener('dragover', e => e.preventDefault());
+    tr.addEventListener('drop', e => {
+      e.preventDefault();
+      const p = JSON.parse(e.dataTransfer.getData('text/plain'));
+      lineup[i] = p;
+      players = players.filter(x => x.id !== p.id);
+      renderBench();
+      renderLineup();
+      renderPitcher();
+    });
+    tbody.appendChild(tr);
+  }
+  updateSubDropdowns();
+}
+
+function renderPitcher() {
+  const nameTd = document.getElementById('pitcher-name');
+  const numTd = document.getElementById('pitcher-num');
+  nameTd.textContent = pitcher?.姓名 || '';
+  numTd.textContent = pitcher?.背號 || '';
+  const row = document.getElementById('pitcher-row');
+  row.addEventListener('dragover', e => e.preventDefault());
+  row.addEventListener('drop', e => {
+    e.preventDefault();
+    const p = JSON.parse(e.dataTransfer.getData('text/plain'));
+    pitcher = p;
+    players = players.filter(x => x.id !== p.id);
+    renderBench();
+    renderPitcher();
+  });
+}
+
+function renderBench() {
+  const benchDiv = document.getElementById('bench');
+  benchDiv.innerHTML = '';
+  players.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'player';
+    div.textContent = `#${p['背號']} ${p['姓名']}`;
+    div.draggable = true;
+    div.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', JSON.stringify(p));
+    });
+    benchDiv.appendChild(div);
+  });
+  updateSubDropdowns();
+}
 
 function updateSubDropdowns() {
   const outSel = document.getElementById('sub-out');
@@ -116,6 +201,23 @@ function substitute() {
   renderBench();
   renderPitcher();
   updateScoreColor();
+}
+
+function rotatePositions() {
+  const str = document.getElementById('rotate-input').value;
+  const seq = str.trim().split('');
+  const selects = document.querySelectorAll('#lineup select');
+  const posMap = {};
+  selects.forEach(sel => posMap[sel.value] = sel);
+  const temp = {};
+  for (let i = 0; i < seq.length; i++) {
+    const cur = seq[i];
+    const next = seq[(i + 1) % seq.length];
+    if (posMap[cur]) temp[cur] = posMap[next]?.value;
+  }
+  for (const [k, v] of Object.entries(temp)) {
+    if (posMap[k] && v) posMap[k].value = v;
+  }
 }
 </script>
 </body>
