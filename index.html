@@ -41,7 +41,7 @@
     <div style="align-self: end;"><button onclick="substitute()">執行換人</button></div>
   </div>
   <div class="title">守位輪換</div>
-  <input type="text" id="rotate-input" placeholder="例如：8918" />
+  <input type="text" id="rotate-input" />
   <button onclick="rotatePositions()" style="margin-top:0.5rem;width:100%">執行輪換</button>
   <div class="title">比數</div>
   <div class="score">
@@ -65,17 +65,11 @@ fetch(sheetCSV)
     document.getElementById('opponent').textContent = data[4][8] || '';
     document.getElementById('offdef').textContent = '攻守：' + (data[5][8] || '');
 
-    const headers = data[6];
-    const body = data.slice(7);
-    const getIndex = key => headers.indexOf(key);
-    const idxNum = getIndex('背號'), idxName = getIndex('姓名'), idxAttend = getIndex('出席');
-    players = [];
-    for (let r of body) {
-      const name = r[idxName], num = r[idxNum], attend = r[idxAttend];
-      if ((attend + '').trim().toUpperCase() === 'Y' && name && num) {
-        players.push({ id: crypto.randomUUID(), 背號: num.trim(), 姓名: name.trim() });
-      }
-    }
+    players = data
+      .map(r => ({ 背號: r[0], 姓名: r[1], 出席: r[2] }))
+      .filter(p => (p.出席 + '').trim().toUpperCase() === 'Y' && p.背號 && p.姓名)
+      .map(p => ({ ...p, id: crypto.randomUUID() }));
+
     renderBench();
     renderLineup();
   });
