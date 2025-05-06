@@ -50,6 +50,7 @@
     <input type="number" id="score1" value="0"/>:<input type="number" id="score2" value="0"/>
   </div>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
@@ -70,7 +71,14 @@ fetch(sheetCSV)
     const body = data.slice(7);
     const getIndex = key => headers.indexOf(key);
     const idxNum = getIndex('背號'), idxName = getIndex('姓名'), idxAttend = getIndex('出席');
-    players = body.filter(r => r[idxAttend] === 'Y' && r[idxNum] && r[idxName]).map((r, i) => ({ id: i + '-' + r[idxNum] + '-' + r[idxName], '背號': r[idxNum], '姓名': r[idxName] }));
+
+    players = [];
+    for (let r of body) {
+      const name = r[idxName], num = r[idxNum], attend = r[idxAttend];
+      if (attend?.toUpperCase() === 'Y' && name && num) {
+        players.push({ id: crypto.randomUUID(), 背號: num.trim(), 姓名: name.trim() });
+      }
+    }
     renderBench();
     renderLineup();
   });
@@ -158,10 +166,15 @@ function rotatePositions() {
   const selects = document.querySelectorAll('#lineup select');
   const posMap = {};
   selects.forEach(sel => posMap[sel.value] = sel);
-  const values = seq.map(k => posMap[k]?.value);
+  const currentMap = {};
+  seq.forEach(k => {
+    if (posMap[k]) currentMap[k] = posMap[k].value;
+  });
   for (let i = 0; i < seq.length; i++) {
-    const cur = seq[i], nextVal = values[(i + values.length - 1) % values.length];
-    if (posMap[cur]) posMap[cur].value = nextVal;
+    const cur = seq[i], next = seq[(i + 1) % seq.length];
+    if (posMap[cur] && currentMap[next]) {
+      posMap[cur].value = currentMap[next];
+    }
   }
 }
 </script>
