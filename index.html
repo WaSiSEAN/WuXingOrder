@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>攻守名單管理</title>
   <style>
     body { font-family: sans-serif; background: #fff; margin: 0; padding: 1rem; }
@@ -16,7 +15,7 @@
     .sub-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     input, select { width: 100%; padding: 4px; }
     .score { display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold; }
-    .droppable { min-height: 38px; }
+    .droppable td { min-height: 38px; }
   </style>
 </head>
 <body>
@@ -25,11 +24,21 @@
   <table>
     <tr><td colspan="2">比賽日期</td><td colspan="2" id="date"></td><td>開賽時間</td><td id="start"></td></tr>
     <tr><td colspan="2">比賽對手</td><td colspan="2" id="opponent"></td><td>集合時間</td><td id="gather"></td></tr>
-    <tr><td colspan="6" id="offdef"></td></tr>
+    <tr><td colspan="6" id="offdef">攻守：</td></tr>
   </table>
   <table>
     <thead><tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr></thead>
-    <tbody id="lineup" class="droppable"></tbody>
+    <tbody id="lineup" class="droppable">
+      <tr><td>1</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>2</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>3</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>4</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>5</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>6</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>7</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>8</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+      <tr><td>9</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
+    </tbody>
     <tr><td colspan="4">P</td></tr>
   </table>
   <div class="title">預備球員</div>
@@ -42,7 +51,7 @@
   </div>
   <div class="title">守位輪換</div>
   <input type="text" id="rotate-input" placeholder="例如：8918" />
-  <button onclick="rotatePositions()" style="margin-top:0.5rem;width:100%;">執行輪換</button>
+  <button onclick="rotatePositions()" style="margin-top:0.5rem;width:100%">執行輪換</button>
   <div class="title">比數</div>
   <div class="score">
     <input type="number" id="score1" value="0"/>:<input type="number" id="score2" value="0"/>
@@ -89,27 +98,19 @@ function renderBench(){
 }
 
 const lineupTable = document.getElementById('lineup');
-lineupTable.addEventListener('dragover', e => e.preventDefault());
-lineupTable.addEventListener('drop', e => {
-  e.preventDefault();
-  const p = JSON.parse(e.dataTransfer.getData('text/plain'));
-  if (!lineup.find(x => x['背號'] === p['背號'])) {
-    lineup.push(p);
+lineupTable.querySelectorAll('tr').forEach((tr, i) => {
+  tr.addEventListener('dragover', e => e.preventDefault());
+  tr.addEventListener('drop', e => {
+    e.preventDefault();
+    const p = JSON.parse(e.dataTransfer.getData('text/plain'));
+    const cells = tr.querySelectorAll('td');
+    cells[2].textContent = p['姓名'];
+    cells[3].textContent = p['背號'];
+    lineup[i] = p;
     players = players.filter(x => x['背號'] !== p['背號']);
-    renderLineup();
     renderBench();
-  }
-});
-
-function renderLineup(){
-  lineupTable.innerHTML = '';
-  lineup.forEach((p, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td>${p['姓名']}</td><td>${p['背號']}</td>`;
-    lineupTable.appendChild(tr);
   });
-  updateSubDropdowns();
-}
+});
 
 function updateSubDropdowns(){
   const outSel = document.getElementById('sub-out');
@@ -117,10 +118,12 @@ function updateSubDropdowns(){
   outSel.innerHTML = '';
   inSel.innerHTML = '';
   lineup.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p['背號'];
-    opt.text = `#${p['背號']} ${p['姓名']}`;
-    outSel.appendChild(opt);
+    if(p){
+      const opt = document.createElement('option');
+      opt.value = p['背號'];
+      opt.text = `#${p['背號']} ${p['姓名']}`;
+      outSel.appendChild(opt);
+    }
   });
   players.forEach(p => {
     const opt = document.createElement('option');
@@ -133,27 +136,35 @@ function updateSubDropdowns(){
 function substitute(){
   const outNum = document.getElementById('sub-out').value;
   const inNum = document.getElementById('sub-in').value;
-  const outIdx = lineup.findIndex(p => p['背號'] === outNum);
+  const outIdx = lineup.findIndex(p => p && p['背號'] === outNum);
   const inPlayer = players.find(p => p['背號'] === inNum);
   if(outIdx === -1 || !inPlayer) return;
   players = players.filter(p => p['背號'] !== inNum);
   players.push(lineup[outIdx]);
   lineup[outIdx] = inPlayer;
-  renderLineup();
+  const row = lineupTable.querySelectorAll('tr')[outIdx];
+  if(row){
+    row.querySelectorAll('td')[2].textContent = inPlayer['姓名'];
+    row.querySelectorAll('td')[3].textContent = inPlayer['背號'];
+  }
   renderBench();
+  updateSubDropdowns();
 }
 
 function rotatePositions(){
   const str = document.getElementById('rotate-input').value;
   if(!str) return;
   const seq = str.trim().split('');
-  const selects = document.querySelectorAll('#lineup select');
-  const map = {};
-  selects.forEach(s => map[s.value] = s);
+  const rows = lineupTable.querySelectorAll('tr');
+  const posMap = {};
+  rows.forEach(row => {
+    const pos = row.querySelector('select')?.value;
+    if(pos) posMap[pos] = row.querySelector('select');
+  });
   for(let i=0; i<seq.length-1; i++){
-    if(map[seq[i]]) map[seq[i]].value = seq[i+1];
+    if(posMap[seq[i]]) posMap[seq[i]].value = seq[i+1];
   }
-  if(map[seq[seq.length-1]]) map[seq[seq.length-1]].value = seq[0];
+  if(posMap[seq.at(-1)]) posMap[seq.at(-1)].value = seq[0];
 }
 </script>
 </body>
