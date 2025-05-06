@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>攻守名單編排</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f9f9f9;
+    }
+    .container {
+      max-width: 960px;
+      margin: auto;
+    }
+    .section {
+      margin: 1rem 0;
+    }
+    .flex {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .list {
+      flex: 1;
+      min-width: 280px;
+      padding: 0.5rem;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .player {
+      padding: 0.5rem;
+      margin: 0.25rem 0;
+      background: #e0f7fa;
+      border: 1px solid #00796b;
+      border-radius: 4px;
+      cursor: grab;
+    }
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.25rem;
+      margin-top: 0.25rem;
+    }
+    .row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .row > * {
+      flex: 1;
+    }
+    .score {
+      text-align: center;
+      font-size: 2rem;
+    }
+    .highlight {
+      background: #ffd54f;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>吳興街友 攻守名單管理系統</h2>
+
+    <div class="section">
+      <strong>比賽資訊：</strong><br>
+      日期：<span id="date"></span>｜集合時間：<span id="gather"></span>｜開賽時間：<span id="start"></span><br>
+      對手：<span id="opponent"></span>｜攻守：<span id="offdef"></span>
+    </div>
+
+    <div class="section flex">
+      <div class="list" id="bench">
+        <strong>預備球員（紅框）</strong>
+      </div>
+      <div class="list" id="lineup">
+        <strong>正選球員（綠框）</strong>
+        <div id="lineup-list"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <strong>守位設定（藍框）</strong>
+      <div id="positions" class="flex"></div>
+    </div>
+
+    <div class="section">
+      <strong>換人操作（橘＋紫框）</strong>
+      <div class="row">
+        <div>
+          換下（橘框）<select id="sub-out"></select>
+        </div>
+        <div>
+          換上（紫框）<select id="sub-in"></select>
+        </div>
+        <div>
+          <button onclick="substitute()">執行換人</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <strong>守位輪換（黃框）</strong>
+      <input type="text" id="rotate-input" placeholder="例如：8918" />
+      <button onclick="rotatePositions()">執行輪換</button>
+    </div>
+
+    <div class="section score">
+      <span class="highlight">比數</span><br>
+      <input type="number" id="score1" value="0" /> : <input type="number" id="score2" value="0" />
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tabletop@1.6.0/tabletop.min.js"></script>
+  <script>
+    let players = [];
+    let lineup = [];
+    let sheetURL = 'https://docs.google.com/spreadsheets/d/17ma-J6yGYIjDgFiuxRTRS_Uxnov_ThIGMZZWfs0zJUU/pubhtml';
+
+    Tabletop.init({
+      key: sheetURL,
+      simpleSheet: true,
+      callback: function (data) {
+        players = data.filter(p => p['出席'] === 'Y');
+        renderBench();
+        renderMatchInfo(data[0]);
+      }
+    });
+
+    function renderBench() {
+      const bench = document.getElementById('bench');
+      bench.innerHTML = '<strong>預備球員（紅框）</strong>';
+      players.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'player';
+        div.draggable = true;
+        div.dataset.number = p['背號'];
+        div.dataset.name = p['姓名'];
+        div.textContent = `#${p['背號']} ${p['姓名']}`;
+        bench.appendChild(div);
+      });
+      updateSubDropdowns();
+    }
+
+    function renderMatchInfo(p) {
+      document.getElementById('date').textContent = p['比賽日期'] || '-';
+      document.getElementById('gather').textContent = p['集合時間'] || '-';
+      document.getElementById('start').textContent = p['開賽時間'] || '-';
+      document.getElementById('opponent').textContent = p['對手'] || '-';
+      document.getElementById('offdef').textContent = p['攻守'] || '-';
+    }
+
+    const lineupContainer = document.getElementById('lineup-list');
+    Sortable.create(lineupContainer, {
+      group: { name: 'players', pull: true, put: true },
+      animation: 150,
+      onAdd: function (evt) {
+        const el = evt.item;
+        el.remove();
+        lineup.push({ number: el.dataset.number, name: el.dataset.name });
+        renderLineup();
+        renderPositions();
+        updateSubDropdowns();
+      },
+      onUpdate: function () {
+        const items = lineupContainer.querySelectorAll('.player');
+        lineup = Array.from(items).map(el => ({ number: el.dataset.number, name: el.dataset.name }));
+        renderPositions();
+        updateSubDropdowns();
+      }
+    });
+
+    function renderLineup() {
+      lineupContainer.innerHTML = '';
+      lineup.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'player';
+        div.draggable = true;
+        div.dataset.number = p.number;
+        div.dataset.name = p.name;
+        div.textContent = `#${p.number} ${p.name}`;
+        lineupContainer.appendChild(div);
+      });
+    }
+
+    function renderPositions() {
+      const pos = document.getElementById('positions');
+      pos.innerHTML = '';
+      lineup.forEach(p => {
+        const div = document.createElement('div');
+        div.innerHTML = `#${p.number} ${p.name}<br><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select>`;
+        pos.appendChild(div);
+      });
+    }
+
+    function updateSubDropdowns() {
+      const subOut = document.getElementById('sub-out');
+      const subIn = document.getElementById('sub-in');
+      subOut.innerHTML = '';
+      subIn.innerHTML = '';
+
+      lineup.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.number;
+        opt.text = `#${p.number} ${p.name}`;
+        subOut.appendChild(opt);
+      });
+
+      const benchItems = document.getElementById('bench').querySelectorAll('.player');
+      benchItems.forEach(el => {
+        const opt = document.createElement('option');
+        opt.value = el.dataset.number;
+        opt.text = `#${el.dataset.number} ${el.dataset.name}`;
+        subIn.appendChild(opt);
+      });
+    }
+
+    function substitute() {
+      const outNum = document.getElementById('sub-out').value;
+      const inNum = document.getElementById('sub-in').value;
+      const inEl = document.querySelector(`#bench .player[data-number='${inNum}']`);
+      if (!inEl) return;
+
+      const index = lineup.findIndex(p => p.number === outNum);
+      if (index === -1) return;
+
+      lineup[index] = { number: inEl.dataset.number, name: inEl.dataset.name };
+      inEl.remove();
+      renderLineup();
+      renderPositions();
+      updateSubDropdowns();
+    }
+
+    function rotatePositions() {
+      const str = document.getElementById('rotate-input').value.trim();
+      if (!str) return;
+      const order = str.split('');
+      const selects = document.querySelectorAll('#positions select');
+      const map = {};
+      selects.forEach(sel => map[sel.value] = sel);
+      for (let i = 0; i < order.length - 1; i++) {
+        if (map[order[i]]) {
+          map[order[i]].value = order[i + 1];
+        }
+      }
+      if (map[order[order.length - 1]]) {
+        map[order[order.length - 1]].value = order[0];
+      }
+    }
+  </script>
+</body>
+</html>
