@@ -12,7 +12,7 @@
       padding: 1rem;
     }
     .wrapper {
-      max-width: 980px;
+      max-width: 960px;
       margin: auto;
     }
     table {
@@ -20,10 +20,10 @@
       border-collapse: collapse;
       margin-bottom: 1rem;
     }
-    td, th {
-      border: 1px solid #999;
-      padding: 4px;
+    th, td {
+      border: 1px solid #ccc;
       text-align: center;
+      padding: 6px;
     }
     .title {
       text-align: center;
@@ -31,38 +31,33 @@
       font-weight: bold;
       margin: 1rem 0;
     }
-    .highlight {
-      background: #ffd54f;
-    }
-    .drag-area {
-      display: flex;
-      flex-wrap: wrap;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 0.5rem;
-      justify-content: space-between;
     }
-    .player-tag {
-      border: 1px solid #333;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
+    .player {
       background: #e0f7fa;
+      border: 1px solid #00796b;
+      padding: 4px;
+      border-radius: 4px;
+      text-align: center;
       cursor: grab;
-      width: 48%;
     }
-    .sub-area {
+    .sub-row {
       display: flex;
       gap: 0.5rem;
       margin-bottom: 1rem;
     }
-    input[type="text"], input[type="number"], select {
+    input, select {
       width: 100%;
       padding: 4px;
     }
-    .score-box {
+    .score {
       display: flex;
       justify-content: center;
       gap: 1rem;
-      align-items: center;
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: bold;
     }
   </style>
@@ -76,52 +71,40 @@
     <tr><td colspan="6" id="offdef"></td></tr>
   </table>
   <table>
-    <tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr>
+    <thead><tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr></thead>
     <tbody id="lineup"></tbody>
     <tr><td colspan="4">P</td></tr>
   </table>
 
   <div class="title">預備球員</div>
-  <div id="bench" class="drag-area"></div>
+  <div id="bench" class="grid"></div>
 
   <div class="title">球員更換</div>
-  <div class="sub-area">
-    <div>
-      <label>換下（橘框）</label>
-      <select id="sub-out"></select>
-    </div>
-    <div>
-      <label>換上（紫框）</label>
-      <select id="sub-in"></select>
-    </div>
-    <div style="align-self: end;">
-      <button onclick="substitute()">執行換人</button>
-    </div>
+  <div class="sub-row">
+    <div><label>換下</label><select id="sub-out"></select></div>
+    <div><label>換上</label><select id="sub-in"></select></div>
+    <div style="align-self: end;"><button onclick="substitute()">執行換人</button></div>
   </div>
 
-  <div class="title">守位輸換（黃框）</div>
-  <input type="text" id="rotate-input" placeholder="例如：8918" style="width:100%; margin-bottom: 1rem;">
-  <button onclick="rotatePositions()" style="width:100%;">執行輪換</button>
+  <div class="title">守位輪換</div>
+  <input type="text" id="rotate-input" placeholder="例如：8918" />
+  <button onclick="rotatePositions()" style="margin-top:0.5rem;width:100%;">執行輪換</button>
 
   <div class="title">比數</div>
-  <div class="score-box">
-    <input type="number" id="score1" value="0"> : <input type="number" id="score2" value="0">
+  <div class="score">
+    <input type="number" id="score1" value="0"/>:<input type="number" id="score2" value="0"/>
   </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tabletop@1.6.0/tabletop.min.js"></script>
 <script>
-const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
+const sheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pubhtml?gid=0&single=true';
 let players = [];
 let lineup = [];
 
-fetch(sheetURL)
-  .then(res => res.text())
-  .then(csv => {
-    const rows = csv.split('\n').map(r => r.split(','));
-    const header = rows[0];
-    const data = rows.slice(1).map(row => Object.fromEntries(row.map((v,i)=>[header[i],v])));
+Tabletop.init({
+  key: sheetURL,
+  callback: function (data) {
     const info = data.find(d => d['雙和聯盟']);
     if(info){
       document.getElementById('date').textContent = info['比賽日期'];
@@ -130,16 +113,18 @@ fetch(sheetURL)
       document.getElementById('opponent').textContent = info['對手'];
       document.getElementById('offdef').textContent = '攻守：' + info['攻守'];
     }
-    players = data.filter(d => d['出席'] === 'Y');
+    players = data.filter(p => p['出席'] === 'Y');
     renderBench();
-  });
+  },
+  simpleSheet: true
+});
 
 function renderBench(){
-  const benchDiv = document.getElementById('bench');
-  benchDiv.innerHTML = '';
+  const bench = document.getElementById('bench');
+  bench.innerHTML = '';
   players.forEach(p => {
     const div = document.createElement('div');
-    div.className = 'player-tag';
+    div.className = 'player';
     div.textContent = `#${p['背號']} ${p['姓名']}`;
     div.draggable = true;
     div.dataset.number = p['背號'];
@@ -147,15 +132,14 @@ function renderBench(){
     div.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/plain', JSON.stringify(p));
     });
-    benchDiv.appendChild(div);
+    bench.appendChild(div);
   });
   updateSubDropdowns();
 }
 
-const lineupBody = document.getElementById('lineup');
-
-lineupBody.addEventListener('dragover', e => e.preventDefault());
-lineupBody.addEventListener('drop', e => {
+const lineupTable = document.getElementById('lineup');
+lineupTable.addEventListener('dragover', e => e.preventDefault());
+lineupTable.addEventListener('drop', e => {
   e.preventDefault();
   const p = JSON.parse(e.dataTransfer.getData('text/plain'));
   lineup.push(p);
@@ -165,31 +149,31 @@ lineupBody.addEventListener('drop', e => {
 });
 
 function renderLineup(){
-  lineupBody.innerHTML = '';
-  lineup.forEach((p, idx) => {
-    const row = document.createElement('tr');
-    row.innerHTML = `<td>${idx+1}</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td>${p['姓名']}</td><td>${p['背號']}</td>`;
-    lineupBody.appendChild(row);
+  lineupTable.innerHTML = '';
+  lineup.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td>${p['姓名']}</td><td>${p['背號']}</td>`;
+    lineupTable.appendChild(tr);
   });
   updateSubDropdowns();
 }
 
 function updateSubDropdowns(){
-  const subOut = document.getElementById('sub-out');
-  const subIn = document.getElementById('sub-in');
-  subOut.innerHTML = '';
-  subIn.innerHTML = '';
+  const outSel = document.getElementById('sub-out');
+  const inSel = document.getElementById('sub-in');
+  outSel.innerHTML = '';
+  inSel.innerHTML = '';
   lineup.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p['背號'];
     opt.text = `#${p['背號']} ${p['姓名']}`;
-    subOut.appendChild(opt);
+    outSel.appendChild(opt);
   });
   players.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p['背號'];
     opt.text = `#${p['背號']} ${p['姓名']}`;
-    subIn.appendChild(opt);
+    inSel.appendChild(opt);
   });
 }
 
@@ -207,13 +191,13 @@ function substitute(){
 }
 
 function rotatePositions(){
-  const val = document.getElementById('rotate-input').value.trim();
-  if(!val) return;
-  const seq = val.split('');
+  const str = document.getElementById('rotate-input').value;
+  if(!str) return;
+  const seq = str.trim().split('');
   const selects = document.querySelectorAll('#lineup select');
   const map = {};
   selects.forEach(s => map[s.value] = s);
-  for(let i=0;i<seq.length-1;i++){
+  for(let i=0; i<seq.length-1; i++){
     if(map[seq[i]]) map[seq[i]].value = seq[i+1];
   }
   if(map[seq[seq.length-1]]) map[seq[seq.length-1]].value = seq[0];
