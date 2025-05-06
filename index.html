@@ -15,6 +15,7 @@
     .sub-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
     input, select { width: 100%; padding: 4px; }
     .score { display: flex; justify-content: center; gap: 1rem; font-size: 1.5rem; font-weight: bold; }
+    .droppable { min-height: 38px; }
   </style>
 </head>
 <body>
@@ -27,7 +28,7 @@
   </table>
   <table>
     <thead><tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr></thead>
-    <tbody id="lineup"></tbody>
+    <tbody id="lineup" class="droppable"></tbody>
     <tr><td colspan="4">P</td></tr>
   </table>
   <div class="title">預備球員</div>
@@ -91,10 +92,12 @@ lineupTable.addEventListener('dragover', e => e.preventDefault());
 lineupTable.addEventListener('drop', e => {
   e.preventDefault();
   const p = JSON.parse(e.dataTransfer.getData('text/plain'));
-  lineup.push(p);
-  players = players.filter(x => x['背號'] !== p['背號']);
-  renderLineup();
-  renderBench();
+  if (!lineup.find(x => x['背號'] === p['背號'])) {
+    lineup.push(p);
+    players = players.filter(x => x['背號'] !== p['背號']);
+    renderLineup();
+    renderBench();
+  }
 });
 
 function renderLineup(){
