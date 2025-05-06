@@ -30,7 +30,11 @@
   <table>
     <thead><tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr></thead>
     <tbody id="lineup" class="droppable"></tbody>
-    <tr id="pitcher-row"><td colspan="2">P</td><td></td><td></td></tr>
+    <tr id="pitcher-row">
+      <td colspan="2">P</td>
+      <td id="pitcher-name"></td>
+      <td id="pitcher-num"></td>
+    </tr>
   </table>
   <div class="title">預備球員</div>
   <div id="bench" class="grid"></div>
@@ -52,7 +56,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
-let players = [], lineup = new Array(9).fill(null);
+let players = [], lineup = new Array(9).fill(null), positions = new Array(9).fill('1'), pitcher = null;
 
 fetch(sheetCSV)
   .then(res => res.text())
@@ -72,6 +76,7 @@ fetch(sheetCSV)
 
     renderBench();
     renderLineup();
+    renderPitcher();
   });
 
 function renderLineup() {
@@ -83,6 +88,8 @@ function renderLineup() {
     [1,2,3,4,5,6,7,8,9,'DH'].forEach(n => {
       const opt = document.createElement('option'); opt.value = opt.text = n; pos.appendChild(opt);
     });
+    pos.value = positions[i];
+    pos.onchange = () => { positions[i] = pos.value; };
     const player = lineup[i];
     tr.innerHTML = `<td>${i + 1}</td>`;
     const td1 = document.createElement('td'); td1.appendChild(pos);
@@ -98,10 +105,28 @@ function renderLineup() {
       players = players.filter(x => x.id !== p.id);
       renderBench();
       renderLineup();
+      renderPitcher();
     });
     tbody.appendChild(tr);
   }
   updateSubDropdowns();
+}
+
+function renderPitcher() {
+  const nameTd = document.getElementById('pitcher-name');
+  const numTd = document.getElementById('pitcher-num');
+  nameTd.textContent = pitcher?.姓名 || '';
+  numTd.textContent = pitcher?.背號 || '';
+  const row = document.getElementById('pitcher-row');
+  row.addEventListener('dragover', e => e.preventDefault());
+  row.addEventListener('drop', e => {
+    e.preventDefault();
+    const p = JSON.parse(e.dataTransfer.getData('text/plain'));
+    pitcher = p;
+    players = players.filter(x => x.id !== p.id);
+    renderBench();
+    renderPitcher();
+  });
 }
 
 function renderBench() {
@@ -149,6 +174,7 @@ function substitute() {
   players.splice(inIdx, 1);
   renderLineup();
   renderBench();
+  renderPitcher();
 }
 
 function rotatePositions() {
