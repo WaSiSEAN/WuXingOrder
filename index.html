@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>攻守名單管理</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>吳興街友 攻守名單管理系統</title>
   <style>
     body { font-family: sans-serif; background: #fff; margin: 0; padding: 1rem; }
     .wrapper { max-width: 960px; margin: auto; }
@@ -28,18 +28,8 @@
   </table>
   <table>
     <thead><tr><th>打序</th><th>守位</th><th>姓名</th><th>背號</th></tr></thead>
-    <tbody id="lineup" class="droppable">
-      <tr><td>1</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>2</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>3</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>4</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>5</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>6</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>7</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>8</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-      <tr><td>9</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
-    </tbody>
-    <tr><td colspan="4">P</td></tr>
+    <tbody id="lineup" class="droppable"></tbody>
+    <tr id="pitcher-row"><td>P</td><td><select><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>DH</option></select></td><td></td><td></td></tr>
   </table>
   <div class="title">預備球員</div>
   <div id="bench" class="grid"></div>
@@ -60,111 +50,113 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
-let players = [], lineup = [];
+let players = [], lineup = new Array(9).fill(null), bench = [], uniqueId = p => `#${p['背號']} ${p['姓名']}`;
 
 fetch(sheetCSV)
   .then(res => res.text())
   .then(csv => {
-    const parsed = Papa.parse(csv, { header: true });
-    const rows = parsed.data;
-    const info = rows.find(r => r['雙和聯盟'] !== undefined);
-    if(info){
-      document.getElementById('date').textContent = info['比賽日期'] || '';
-      document.getElementById('start').textContent = info['開賽時間'] || '';
-      document.getElementById('gather').textContent = info['集合時間'] || '';
-      document.getElementById('opponent').textContent = info['對手'] || '';
-      document.getElementById('offdef').textContent = '攻守：' + (info['攻守'] || '');
-    }
-    players = rows.filter(p => p['出席'] === 'Y' && p['背號'] && p['姓名']);
+    const data = Papa.parse(csv, { header: false }).data;
+    document.getElementById('date').textContent = data[0][7] || '';
+    document.getElementById('start').textContent = data[2][8] || '';
+    document.getElementById('gather').textContent = data[1][8] || '';
+    document.getElementById('opponent').textContent = data[3][7] || '';
+    document.getElementById('offdef').textContent = '攻守：' + (data[4][7] || '');
+
+    const headers = data[6];
+    const body = data.slice(7);
+    const getIndex = key => headers.indexOf(key);
+    const idxNum = getIndex('背號'), idxName = getIndex('姓名'), idxAttend = getIndex('出席');
+    players = body.filter(r => r[idxAttend] === 'Y' && r[idxNum] && r[idxName]).map(r => ({ '背號': r[idxNum], '姓名': r[idxName] }));
     renderBench();
+    renderLineup();
   });
 
-function renderBench(){
-  const bench = document.getElementById('bench');
-  bench.innerHTML = '';
+function renderLineup() {
+  const tbody = document.getElementById('lineup');
+  tbody.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const tr = document.createElement('tr');
+    const pos = document.createElement('select');
+    [1,2,3,4,5,6,7,8,9,'DH'].forEach(n => {
+      const opt = document.createElement('option'); opt.value = opt.text = n; pos.appendChild(opt);
+    });
+    const player = lineup[i];
+    tr.innerHTML = `<td>${i + 1}</td>`;
+    const td1 = document.createElement('td'); td1.appendChild(pos);
+    const td2 = document.createElement('td'); td2.textContent = player?.姓名 || '';
+    const td3 = document.createElement('td'); td3.textContent = player?.背號 || '';
+    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+    tr.dataset.index = i;
+    tr.addEventListener('dragover', e => e.preventDefault());
+    tr.addEventListener('drop', e => {
+      e.preventDefault();
+      const p = JSON.parse(e.dataTransfer.getData('text/plain'));
+      lineup[i] = p;
+      players = players.filter(x => uniqueId(x) !== uniqueId(p));
+      renderBench();
+      renderLineup();
+    });
+    tbody.appendChild(tr);
+  }
+  updateSubDropdowns();
+}
+
+function renderBench() {
+  const benchDiv = document.getElementById('bench');
+  benchDiv.innerHTML = '';
   players.forEach(p => {
     const div = document.createElement('div');
     div.className = 'player';
-    div.textContent = `#${p['背號']} ${p['姓名']}`;
+    div.textContent = uniqueId(p);
     div.draggable = true;
-    div.dataset.number = p['背號'];
-    div.dataset.name = p['姓名'];
     div.addEventListener('dragstart', e => {
       e.dataTransfer.setData('text/plain', JSON.stringify(p));
     });
-    bench.appendChild(div);
+    benchDiv.appendChild(div);
   });
   updateSubDropdowns();
 }
 
-const lineupTable = document.getElementById('lineup');
-lineupTable.querySelectorAll('tr').forEach((tr, i) => {
-  tr.addEventListener('dragover', e => e.preventDefault());
-  tr.addEventListener('drop', e => {
-    e.preventDefault();
-    const p = JSON.parse(e.dataTransfer.getData('text/plain'));
-    const cells = tr.querySelectorAll('td');
-    cells[2].textContent = p['姓名'];
-    cells[3].textContent = p['背號'];
-    lineup[i] = p;
-    players = players.filter(x => x['背號'] !== p['背號']);
-    renderBench();
-  });
-});
-
-function updateSubDropdowns(){
+function updateSubDropdowns() {
   const outSel = document.getElementById('sub-out');
   const inSel = document.getElementById('sub-in');
   outSel.innerHTML = '';
   inSel.innerHTML = '';
-  lineup.forEach(p => {
-    if(p){
+  lineup.forEach((p, i) => {
+    if (p) {
       const opt = document.createElement('option');
-      opt.value = p['背號'];
-      opt.text = `#${p['背號']} ${p['姓名']}`;
+      opt.value = i;
+      opt.text = uniqueId(p);
       outSel.appendChild(opt);
     }
   });
-  players.forEach(p => {
+  players.forEach((p, i) => {
     const opt = document.createElement('option');
-    opt.value = p['背號'];
-    opt.text = `#${p['背號']} ${p['姓名']}`;
+    opt.value = i;
+    opt.text = uniqueId(p);
     inSel.appendChild(opt);
   });
 }
 
-function substitute(){
-  const outNum = document.getElementById('sub-out').value;
-  const inNum = document.getElementById('sub-in').value;
-  const outIdx = lineup.findIndex(p => p && p['背號'] === outNum);
-  const inPlayer = players.find(p => p['背號'] === inNum);
-  if(outIdx === -1 || !inPlayer) return;
-  players = players.filter(p => p['背號'] !== inNum);
-  players.push(lineup[outIdx]);
-  lineup[outIdx] = inPlayer;
-  const row = lineupTable.querySelectorAll('tr')[outIdx];
-  if(row){
-    row.querySelectorAll('td')[2].textContent = inPlayer['姓名'];
-    row.querySelectorAll('td')[3].textContent = inPlayer['背號'];
-  }
+function substitute() {
+  const outIdx = parseInt(document.getElementById('sub-out').value);
+  const inIdx = parseInt(document.getElementById('sub-in').value);
+  if (isNaN(outIdx) || isNaN(inIdx)) return;
+  lineup[outIdx] = players[inIdx];
+  players.splice(inIdx, 1);
+  renderLineup();
   renderBench();
-  updateSubDropdowns();
 }
 
-function rotatePositions(){
+function rotatePositions() {
   const str = document.getElementById('rotate-input').value;
-  if(!str) return;
   const seq = str.trim().split('');
-  const rows = lineupTable.querySelectorAll('tr');
+  const selects = document.querySelectorAll('#lineup select, #pitcher-row select');
   const posMap = {};
-  rows.forEach(row => {
-    const pos = row.querySelector('select')?.value;
-    if(pos) posMap[pos] = row.querySelector('select');
-  });
-  for(let i=0; i<seq.length-1; i++){
-    if(posMap[seq[i]]) posMap[seq[i]].value = seq[i+1];
+  selects.forEach(sel => posMap[sel.value] = sel);
+  for (let i = 0; i < seq.length; i++) {
+    if (posMap[seq[i]]) posMap[seq[i]].value = seq[(i + 1) % seq.length];
   }
-  if(posMap[seq.at(-1)]) posMap[seq.at(-1)].value = seq[0];
 }
 </script>
 </body>
