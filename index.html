@@ -55,7 +55,6 @@
     <input type="number" id="score1" value="0" onchange="updateScoreColor()" />:<input type="number" id="score2" value="0" onchange="updateScoreColor()" />
   </div>
 </div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
 const sheetCSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTeA--X7L0ZCeQvqXvxZjLatdC_yCCJy2QHStokg6pRbBqRC6mBNWf3f03O5U3UHBgxFaIl47K39m8R/pub?output=csv';
@@ -71,7 +70,7 @@ function updateScoreColor() {
   else area.classList.add('orange');
 }
 
-fetch(sheetCSV)
+fetch(sheetCSV + '&t=' + new Date().getTime())
   .then(res => res.text())
   .then(csv => {
     const data = Papa.parse(csv, { header: false }).data;
@@ -81,11 +80,9 @@ fetch(sheetCSV)
     document.getElementById('gather').textContent = data[2][8] || '';
     document.getElementById('opponent').textContent = data[4][8] || '';
     document.getElementById('offdef').textContent = '攻守：' + (data[5][8] || '');
-
     players = data.map(r => ({ 背號: r[0], 姓名: r[1], 出席: r[2] }))
       .filter(p => (p.出席 + '').trim().toUpperCase() === 'Y' && p.背號 && p.姓名)
       .map(p => ({ ...p, id: crypto.randomUUID() }));
-
     renderBench();
     renderLineup();
     renderPitcher();
