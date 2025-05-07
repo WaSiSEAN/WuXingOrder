@@ -217,5 +217,41 @@ function rotatePositions() {
   }
 }
 </script>
+
+<div style="text-align: center; margin-top: 1.5rem;">
+  <img src="momo.png" alt="播放按鈕" class="momo-button" style="width: 100px; cursor: pointer;" onclick="toggleAudio()" />
+</div>
+<audio id="winAudio" src="win.mp3"></audio>
+<audio id="loseAudio" src="lose.mp3"></audio>
+<audio id="drawAudio" src="draw.mp3"></audio>
+<script>
+let currentAudio = null;
+let nextAudio = null;
+function toggleAudio() {
+  if (currentAudio && !currentAudio.paused) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+    currentAudio = null;
+    return;
+  }
+  const area = document.getElementById("score-area");
+  if (area.classList.contains("green")) nextAudio = document.getElementById("winAudio");
+  else if (area.classList.contains("red")) nextAudio = document.getElementById("loseAudio");
+  else nextAudio = document.getElementById("drawAudio");
+  currentAudio = nextAudio;
+  currentAudio.play();
+  currentAudio.onended = () => {
+    const area = document.getElementById("score-area");
+    if (area.classList.contains("green")) nextAudio = document.getElementById("winAudio");
+    else if (area.classList.contains("red")) nextAudio = document.getElementById("loseAudio");
+    else nextAudio = document.getElementById("drawAudio");
+    if (nextAudio !== currentAudio) {
+      currentAudio = nextAudio;
+      currentAudio.play();
+    }
+  };
+}
+</script>
 </body>
+
 </html>
